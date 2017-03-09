@@ -59,32 +59,53 @@ def getRecordsForTeam(links,team):
 	return history
 
 def getScheduleForTeamAndYear(links, team, year):
+	offsets =  [ 
+		{	# Without time column
+			"date": 0,
+			"opponent": 4,
+			"winLoss": 6,
+			"pointsFor": 7,
+			"pointsAgainst": 8
+		},
+		{	# With time colulmn
+			"date": 0,
+			"time": 1,
+			"opponent": 5,
+			"winLoss": 7,
+			"pointsFor": 8,
+			"pointsAgainst": 9 
+		}
+	]
+
 	schedule=[]
 	url = urls[team]+str(year)+'-schedule.html'
 	schedule_html = requests.get(url, headers=header)
 	schedule_bs = BeautifulSoup(schedule_html.text, 'html.parser')
 	schedule_table = schedule_bs.find('table', id='schedule')
 	schedule_tbody = schedule_table.find('tbody')
+	schedule_thead = schedule_table.find('thead')
+	tableHeader = schedule_thead.find('tr')
+	headerCols = tableHeader.find_all('th')
+	dataOffsets = offsets[1] if headerCols[2].text == 'Time' else offsets[0]
 	if schedule_tbody:
 		for gameRow in schedule_tbody.find_all('tr'):
 			cols = gameRow.find_all('td')
-			if cols[0].find('a') == None:
-				date = cols[0].text
+			if cols[dataOffsets['date']].find('a') == None:
+				date = cols[dataOffsets['date']].text
 			else:
-				date = cols[0].find('a').text
-			time = cols[1].text
-			if cols[4].find('a') == None:
-				opponent = cols[5].text
+				date = cols[dataOffsets['date']].find('a').text
+			if cols[dataOffsets['opponent']].find('a') == None:
+				opponent = cols[dataOffsets['opponent']].text
 			else:
-				opponent = cols[5].find('a').text
+				opponent = cols[dataOffsets['opponent']].find('a').text
 			opponent = re.sub(r'\([0-9]+\)', r'',opponent).strip()
-			winLoss = cols[7].text
-			pointsFor = cols[8].text
-			pointsAgainst = cols[9].text
+			winLoss = cols[dataOffsets['winLoss']].text
+			pointsFor = cols[dataOffsets['pointsFor']].text
+			pointsAgainst = cols[dataOffsets['pointsAgainst']].text
 			schedule.append(Game(opponent,date,winLoss,pointsFor,pointsAgainst))
 	return schedule
 
-#import pdb; pdb.set_trace()
+import pdb; pdb.set_trace()
 urls = getTeamUrls()
 
 teamRecords=getRecordsForTeam(urls,'Utah')
