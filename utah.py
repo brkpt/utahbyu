@@ -2,6 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import requests
 import re
+import getopt,sys
 
 header = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:20.0) Gecko/20100101 Firefox/20.0'}
 site = 'http://www.sports-reference.com'
@@ -20,8 +21,6 @@ class Game(object):
 		self.winLoss = winloss
 		self.pointsFor = pointsFor
 		self.pointsAgainst = pointsAgainst
-
-teamHistory = {}
 
 def makeLink(path):
 	return site + path
@@ -78,7 +77,7 @@ def getScheduleForTeamAndYear(links, team, year):
 	]
 
 	schedule=[]
-	url = urls[team]+str(year)+'-schedule.html'
+	url = urls[team]+year+'-schedule.html'
 	schedule_html = requests.get(url, headers=header)
 	schedule_bs = BeautifulSoup(schedule_html.text, 'html.parser')
 	schedule_table = schedule_bs.find('table', id='schedule')
@@ -105,19 +104,61 @@ def getScheduleForTeamAndYear(links, team, year):
 			schedule.append(Game(opponent,date,winLoss,pointsFor,pointsAgainst))
 	return schedule
 
-import pdb; pdb.set_trace()
+def usage() :
+    print("This is my usage")
+
+#import pdb; pdb.set_trace()
+
+print('Starting:')
+try:
+    opts, args = getopt.getopt(sys.argv[1:], 'hy:t:')
+except getopt.GetoptError as err:
+    print str(err)
+    usage()
+    sys.exit(1)
+
+options = {}
+
+try:
+    for o,a in opts:
+        if o == '-h':
+            usage()
+            sys.exit(1)
+        elif o == '-y':
+            options['year'] = a
+        elif o == '-t':
+            options['team'] = a
+        else:
+            print('why is this here?')
+
+except ValueError as err:
+    print str(err)
+    usage()
+    sys.exit(1)
+
+print('getting urls')
 urls = getTeamUrls()
 
-teamRecords=getRecordsForTeam(urls,'Utah')
-teamHistory['Utah'] = teamRecords
-#foo = getScheduleForTeamAndYear(urls, 'Utah', 2016)
+if 'team' in options and not 'year' in options:
+    print('team: '+options['team'])
+if 'year' in options and not 'team' in options:
+    print('year: '+options['year'])
+if 'year' in options and 'team' in options:
+    print('team: '+options['team']+' in '+options['year'])
+    teamInfo = {}
+    teamInfo[options['team']]=getRecordsForTeam(urls,options['team'])
+    teamInfo[options['team']]['results'] = {}
+    teamInfo[options['team']]['results'] = getScheduleForTeamAndYear(urls, options['team'],options['year'])
+    for g in teamInfo[options['team']]['results']:
+	print(g.opponent+'|'+g.date+'|'+g.winLoss+'|'+g.pointsFor+'|'+g.pointsAgainst)
+
 #for g in foo:
 #	print(g.opponent+'|'+g.date+'|'+g.winLoss+'|'+g.pointsFor+'|'+g.pointsAgainst)
-
-for k in teamHistory['Utah']:
-	print(k)
-	sched = getScheduleForTeamAndYear(urls, 'Utah', k)
-	for g in sched:
-		print(g.opponent+'|'+g.date+'|'+g.winLoss+'|'+g.pointsFor+'|'+g.pointsAgainst)
+#
+#for k in teamHistory['Utah']:
+#	print(k)
+#	sched = getScheduleForTeamAndYear(urls, 'Utah', k)
+#	for g in sched:
+#		print(g.opponent+'|'+g.date+'|'+g.winLoss+'|'+g.pointsFor+'|'+g.pointsAgainst)
 
 
